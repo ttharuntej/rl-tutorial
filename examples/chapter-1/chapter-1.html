@@ -1,0 +1,676 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Core of Reinforcement Learning: An Interactive Guide</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .grid-cell {
+            width: 50px;
+            height: 50px;
+            border: 1px solid #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            transition: background-color 0.3s;
+        }
+        .q-value { font-size: 0.5rem; color: #4a5568; position: absolute; opacity: 0.7; }
+        .q-up { top: 1px; left: 50%; transform: translateX(-50%); }
+        .q-down { bottom: 1px; left: 50%; transform: translateX(-50%); }
+        .q-left { left: 1px; top: 50%; transform: translateY(-50%); }
+        .q-right { right: 1px; top: 50%; transform: translateY(-50%); }
+        .active-step {
+            border-color: #4f46e5;
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.4);
+        }
+        .step-panel h2 { margin-bottom: 0.75rem; }
+        .step-panel p { margin-bottom: 1rem; }
+        .explanation-text { font-size: 0.875rem; color: #4b5563; }
+        .preset-btn.active {
+            background-color: #4f46e5;
+            color: white;
+            font-weight: bold;
+        }
+        .tooltip {
+            position: relative;
+            display: inline-flex;
+            align-items: center;
+            cursor: help;
+        }
+        .tooltip .tooltiptext {
+            visibility: hidden;
+            width: 220px;
+            background-color: #555;
+            color: #fff;
+            text-align: center;
+            border-radius: 6px;
+            padding: 8px;
+            position: absolute;
+            z-index: 10;
+            bottom: 125%;
+            left: 50%;
+            margin-left: -110px;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 0.75rem;
+            line-height: 1.4;
+            font-weight: normal;
+        }
+        .tooltip:hover .tooltiptext {
+            visibility: visible;
+            opacity: 1;
+        }
+        .info-icon {
+            margin-left: 4px;
+            color: #9ca3af;
+        }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800">
+
+    <div class="container mx-auto p-4 md:p-8 max-w-7xl">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl font-bold text-gray-900">The Core of Reinforcement Learning: An Interactive Guide</h1>
+            <p class="mt-2 text-lg text-gray-600">Learn by doing. Train an AI agent and see the results of your choices.</p>
+        </header>
+
+        <div class="flex flex-col lg:flex-row gap-8">
+            <!-- Left Panel: Controls and Explanation -->
+            <div class="lg:w-2/5 space-y-6">
+                
+                <!-- New Step 1: Your Challenge (Hook & Play) -->
+                <div id="step-1" class="step-panel bg-white p-6 rounded-lg shadow-md border-2 border-transparent">
+                    <h2 class="text-2xl font-bold text-indigo-600">Step 1: Your Challenge</h2>
+                    <p class="text-gray-700">Your mission: Guide the robot (🤖) to the cheese (🧀). Use the arrow buttons to move.</p>
+                    <div id="manual-controls">
+                        <div class="grid grid-cols-3 gap-2 items-center justify-center">
+                            <div></div>
+                            <button onclick="takeAction(0)" class="action-btn bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition">Up</button>
+                            <div></div>
+                            <button onclick="takeAction(3)" class="action-btn bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition">Left</button>
+                            <div class="flex justify-center items-center"><span class="text-2xl">🤖</span></div>
+                            <button onclick="takeAction(1)" class="action-btn bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition">Right</button>
+                            <div></div>
+                            <button onclick="takeAction(2)" class="action-btn bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition">Down</button>
+                            <div></div>
+                        </div>
+                    </div>
+                     <div id="manual-review" class="hidden mt-4 p-4 bg-green-100 border border-green-300 rounded-lg text-center">
+                        <h3 class="font-bold text-green-800 mb-2">Success! Here's your review:</h3>
+                        <p id="manual-review-text" class="text-sm text-left text-green-800"></p>
+                        <button onclick="resetManualPlay()" class="mt-3 bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition text-sm">Try Again</button>
+                    </div>
+                </div>
+
+                <!-- New Step 2: How an AI Learns (Reveal & Theory) -->
+                <div id="step-2" class="step-panel bg-white p-6 rounded-lg shadow-md border-2 border-transparent hidden">
+                    <h2 class="text-2xl font-bold text-indigo-600">Step 2: How an AI Learns</h2>
+                    <p class="text-gray-700">That was tricky, right? You probably tried to avoid walls and find the shortest path to get a good score. An AI learns the same way, but through thousands of trials with a 'reward' system.</p>
+                    <p class="text-gray-700">This is the core of <strong>Reinforcement Learning</strong>. The agent's goal is to maximize its 
+                        <span class="tooltip">total cumulative reward
+                            <svg class="info-icon w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg>
+                            <span class="tooltiptext">The sum of all rewards collected in one attempt. It's not just about the next reward, but all future rewards.</span>
+                        </span>. Now, you'll become the trainer.</p>
+                </div>
+
+                <!-- New Step 3: Become the Trainer (Experiment) -->
+                <div id="step-3" class="step-panel bg-white p-6 rounded-lg shadow-md border-2 border-transparent hidden">
+                    <h2 class="text-2xl font-bold text-teal-600">Step 3: Become the Trainer</h2>
+                    <p class="text-gray-700">This is where you become the RL practitioner. First, design the rewards. Then, train the agent and see how your choices affect its behavior.</p>
+                    
+                    <div class="p-4 bg-rose-50 rounded-lg mb-4">
+                        <h3 class="font-bold text-rose-800">1. Design the Rewards</h3>
+                        <p class="text-sm text-rose-700 mb-2">Select a preset or create your own custom rewards by changing the values.</p>
+                        <div id="preset-buttons" class="grid grid-cols-4 gap-2 mb-3">
+                            <button id="preset-default" onclick="loadPreset('default')" class="preset-btn bg-gray-200 hover:bg-gray-300 text-sm py-1 px-2 rounded">Default</button>
+                            <button id="preset-timid" onclick="loadPreset('timid')" class="preset-btn bg-gray-200 hover:bg-gray-300 text-sm py-1 px-2 rounded">Timid</button>
+                            <button id="preset-lazy" onclick="loadPreset('lazy')" class="preset-btn bg-gray-200 hover:bg-gray-300 text-sm py-1 px-2 rounded">Lazy</button>
+                            <button id="custom-preset-btn" class="preset-btn bg-gray-200 hover:bg-gray-300 text-sm py-1 px-2 rounded">Custom</button>
+                        </div>
+                         <div class="space-y-2">
+                            <div class="flex justify-between items-center"><label for="goal-reward" class="text-sm tooltip">Goal Reward (🧀) <svg class="info-icon w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg><span class="tooltiptext">The big prize! This is the primary motivation for the agent.</span></label><input type="number" id="goal-reward" oninput="activateCustomPreset()" class="w-20 p-1 border rounded-md text-center"></div>
+                            <div class="flex justify-between items-center"><label for="wall-reward" class="text-sm tooltip">Wall Penalty (🧱) <svg class="info-icon w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg><span class="tooltiptext">A negative reward for hitting a wall. Teaches the agent to avoid obstacles.</span></label><input type="number" id="wall-reward" oninput="activateCustomPreset()" class="w-20 p-1 border rounded-md text-center"></div>
+                            <div class="flex justify-between items-center"><label for="step-reward" class="text-sm tooltip">Step Penalty <svg class="info-icon w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg><span class="tooltiptext">A small negative reward for each step. This encourages the agent to find the SHORTEST path.</span></label><input type="number" id="step-reward" oninput="activateCustomPreset()" step="0.1" class="w-20 p-1 border rounded-md text-center"></div>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-teal-50 rounded-lg">
+                        <h3 class="font-bold text-teal-800">2. Train the Agent</h3>
+                        <p class="text-sm text-teal-700 mb-2">Run episodes to teach the agent. The <span class="tooltip">Q-values <svg class="info-icon w-4 h-4" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7-4a1 1 0 11-2 0 1 1 0 012 0zM9 9a1 1 0 000 2v3a1 1 0 001 1h1a1 1 0 100-2v-3a1 1 0 00-1-1H9z" clip-rule="evenodd"></path></svg><span class="tooltiptext">"Quality" values. A score for how good each action is from a given square. The agent learns to pick the action with the highest Q-value.</span></span> on the grid will update as it learns.</p>
+                        <div class="space-y-2">
+                             <div class="tooltip w-full"><button onclick="runMultipleEpisodes(10)" class="w-full bg-teal-500 hover:bg-teal-600 text-white font-bold py-2 px-4 rounded-lg transition text-sm">Run 10 Learning Episodes</button><span class="tooltiptext">Watch the agent learn step-by-step. Good for seeing how the Q-values change over a few attempts.</span></div>
+                             <div class="tooltip w-full"><button onclick="runAndLogExperiment()" id="log-experiment-btn" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-2 px-4 rounded-lg transition text-sm">Run & Log Full Experiment (100 Episodes)</button><span class="tooltiptext">Run a full, fast training session and log the results to the tracker in the next step.</span></div>
+                             <div class="tooltip w-full"><button onclick="resetQTable()" class="w-full bg-gray-400 hover:bg-gray-500 text-white font-bold py-2 px-4 rounded-lg transition text-sm">Reset Agent's Brain</button><span class="tooltiptext">Erases all learned Q-values. Use this before training a new agent with different rewards.</span></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- New Step 4: Analyze Your Training -->
+                <div id="step-4" class="step-panel bg-white p-6 rounded-lg shadow-md border-2 border-transparent hidden">
+                    <h2 class="text-2xl font-bold text-purple-600">Step 4: Analyze Your Training</h2>
+                    <p class="text-gray-700">Compare the results of your different reward designs. Which one creates the most effective agent?</p>
+                    <div class="overflow-x-auto">
+                        <table id="experiment-table" class="w-full text-sm text-left">
+                            <thead class="text-xs text-gray-700 uppercase bg-gray-100">
+                                <tr><th class="px-2 py-2">Name</th><th class="px-2 py-2">Avg Steps</th><th class="px-2 py-2">Avg Reward</th><th class="px-2 py-2">Reward/Step</th><th class="px-2 py-2">Actions</th></tr>
+                            </thead>
+                            <tbody></tbody>
+                        </table>
+                    </div>
+                    <div id="analysis-section" class="mt-4 p-3 bg-gray-100 rounded-lg space-y-2">
+                        <h4 class="font-bold text-gray-800">How to Read the Results</h4>
+                        <p class="explanation-text"><strong>Avg Steps:</strong> How many steps the agent took. Lower is better (more efficient).</p>
+                        <p class="explanation-text"><strong>Avg Reward:</strong> The final score. Higher is *usually* better.</p>
+                        <p class="explanation-text"><strong>Reward/Step:</strong> The efficiency score. A high positive value is a great sign of a successful agent!</p>
+                        <div id="dynamic-analysis" class="hidden mt-2 pt-2 border-t border-gray-300">
+                           <h4 class="font-bold text-gray-800">Dynamic Analysis</h4>
+                           <p id="analysis-text" class="explanation-text"></p>
+                           <button onclick="goToStep(3)" class="w-full mt-3 bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">Tweak & Train a New Agent</button>
+                        </div>
+                    </div>
+                    <div id="export-section" class="hidden mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg space-y-2">
+                        <h4 class="font-bold text-blue-800">Explore Further</h4>
+                        <p class="explanation-text text-blue-700">Copy your results and ask an AI for a deeper analysis!</p>
+                        <button onclick="generateLLMPrompt()" class="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-3 rounded-lg transition text-sm">Get LLM Prompt</button>
+                        <div id="prompt-container" class="hidden mt-2">
+                            <textarea id="llm-prompt-area" readonly class="w-full h-24 p-2 text-xs bg-white border rounded-md"></textarea>
+                            <button onclick="copyLLMPrompt()" id="copy-prompt-btn" class="w-full mt-1 bg-green-500 hover:bg-green-600 text-white font-bold py-1 px-3 rounded-lg transition text-xs">Copy Prompt</button>
+                        </div>
+                    </div>
+                    <p class="text-xs text-gray-500 italic mt-4"><strong>Note:</strong> These results are saved for this session only and will be lost if you refresh the page.</p>
+                </div>
+
+                <!-- New Step 5: Your Discoveries -->
+                <div id="step-5" class="step-panel bg-white p-6 rounded-lg shadow-md border-2 border-transparent hidden">
+                    <h2 class="text-2xl font-bold text-indigo-600">Step 5: Your Discoveries</h2>
+                    <p class="text-gray-700">Congratulations! You've just performed the core tasks of an RL practitioner. Here's what you discovered:</p>
+                    <ul class="list-disc list-inside space-y-2 text-gray-700">
+                        <li>RL is a <strong>feedback loop</strong> of actions, states, and rewards.</li>
+                        <li>The agent's goal is to maximize its <strong>total cumulative reward</strong>, not just the next one.</li>
+                        <li class="font-bold"><strong>Reward Design is everything.</strong> An agent will find loopholes to "hack" your rewards if you're not careful. Evaluating multiple metrics is key.</li>
+                    </ul>
+                    <div class="mt-4 pt-4 border-t">
+                        <h3 class="font-bold text-gray-800">What would a "Part 2" tutorial cover?</h3>
+                        <p class="text-sm text-gray-600">You've learned that a good reward function (like the 'Default' one) is the foundation. The next steps are about making the agent smarter and more adaptable:</p>
+                        <ul class="list-disc list-inside space-y-2 text-sm text-gray-600 mt-2 pl-4">
+                            <li><strong>Reward Shaping:</strong> Instead of just a penalty per step, could you give a small reward for getting closer to the cheese? This can speed up learning but has its own traps.</li>
+                            <li><strong>Hyperparameter Tuning:</strong> We kept the `LEARNING_RATE` fixed. In the next tutorial, you'd experiment with this to see how it affects training speed and stability.</li>
+                            <li><strong>More Complex Environments:</strong> How would your best agent perform if the maze was bigger, or if the walls moved? This tests how well an agent can generalize its knowledge.</li>
+                        </ul>
+                    </div>
+                </div>
+
+                <!-- Navigation -->
+                <div class="flex justify-between mt-6">
+                    <button id="prev-btn" onclick="changeStep(-1)" class="bg-gray-300 hover:bg-gray-400 text-gray-800 font-bold py-2 px-4 rounded-lg transition disabled:opacity-50">Previous</button>
+                    <button id="next-btn" onclick="changeStep(1)" class="bg-indigo-500 hover:bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg transition">Next Step</button>
+                </div>
+            </div>
+
+            <!-- Right Panel: Grid World -->
+            <div class="lg:w-3/5 bg-white p-6 rounded-lg shadow-lg flex flex-col items-center justify-center">
+                <div id="grid-container" class="grid gap-0.5 bg-gray-200"></div>
+                <div class="mt-4 text-center font-semibold text-xl h-8">
+                    <span id="message-box"></span>
+                    <div id="episode-stats" class="text-sm font-normal text-gray-500 h-6"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const GRID_SIZE = 5;
+        const AGENT = '🤖';
+        const GOAL = '🧀';
+        const WALL = '🧱';
+        const MAX_STEPS = 50;
+        const TOTAL_STEPS = 5;
+        
+        // --- STATE ---
+        let agentPos = { x: 0, y: 0 };
+        let goalPos = { x: 4, y: 4 };
+        let walls = [{x: 2, y: 1}, {x: 2, y: 2}, {x: 2, y: 3}, {x: 1, y: 3}, {x: 3, y: 3}];
+        let qTable = {};
+        let rewards = {};
+        let experiments = [];
+        let currentStep = 1;
+        let currentPresetName = 'Default';
+        let customExperimentCount = 0;
+        let isManualGameOver = false;
+        let manualWallsHit = 0;
+
+        // Hyperparameters
+        const LEARNING_RATE = 0.1;
+        const DISCOUNT_FACTOR = 0.9;
+        let explorationRate = 0.3;
+
+        // Episode tracking
+        let episodeCount = 0;
+        let totalEpisodeReward = 0;
+        let currentEpisodeSteps = 0;
+
+        // DOM Elements
+        const gridContainer = document.getElementById('grid-container');
+        const messageBox = document.getElementById('message-box');
+        const episodeStats = document.getElementById('episode-stats');
+        const stepPanels = document.querySelectorAll('.step-panel');
+        const nextBtn = document.getElementById('next-btn');
+        const prevBtn = document.getElementById('prev-btn');
+        const manualControls = document.getElementById('manual-controls');
+        const manualReview = document.getElementById('manual-review');
+
+        // --- CORE LOGIC ---
+        function initialize() {
+            gridContainer.style.gridTemplateColumns = `repeat(${GRID_SIZE}, 1fr)`;
+            loadPreset('default');
+            resetQTable();
+            updateStepUI();
+        }
+
+        function posKey(pos) { return `${pos.x},${pos.y}`; }
+        
+        function getQValues(pos) {
+            const key = posKey(pos);
+            if (!qTable[key]) qTable[key] = [0, 0, 0, 0];
+            return qTable[key];
+        }
+
+        function resetAgent(isFullReset = true) {
+            agentPos = { x: 0, y: 0 };
+            messageBox.textContent = '';
+            totalEpisodeReward = 0;
+            currentEpisodeSteps = 0;
+            manualWallsHit = 0;
+            if (isFullReset) episodeCount = 0;
+            updateStatsDisplays();
+            render();
+        }
+        
+        function resetQTable() {
+            qTable = {};
+            resetAgent(true);
+        }
+
+        function resetManualPlay() {
+            isManualGameOver = false;
+            manualControls.classList.remove('hidden');
+            manualReview.classList.add('hidden');
+            resetAgent(false);
+        }
+
+        function takeAction(action, isLearning = false, isSilent = false) {
+            if (isManualGameOver || (currentEpisodeSteps >= MAX_STEPS && isLearning)) return;
+
+            const oldPos = { ...agentPos };
+            let newPos = { ...agentPos };
+            let reward = rewards.step;
+            let message = '';
+
+            if (action === 0) newPos.y--;
+            else if (action === 1) newPos.x++;
+            else if (action === 2) newPos.y++;
+            else if (action === 3) newPos.x--;
+
+            if (newPos.x < 0 || newPos.x >= GRID_SIZE || newPos.y < 0 || newPos.y >= GRID_SIZE || walls.some(w => w.x === newPos.x && w.y === newPos.y)) {
+                reward = rewards.wall;
+                message = "Ouch! Hit a wall.";
+                newPos = oldPos;
+                if (!isLearning) manualWallsHit++;
+            } else if (newPos.x === goalPos.x && newPos.y === goalPos.y) {
+                reward = rewards.goal;
+                message = "Success! Found the cheese!";
+            }
+            
+            agentPos = newPos;
+            totalEpisodeReward += reward;
+            currentEpisodeSteps++;
+            
+            if (!isSilent) {
+                messageBox.textContent = message;
+            }
+
+            if (isLearning) {
+                const oldQValue = getQValues(oldPos)[action];
+                const maxFutureQ = Math.max(...getQValues(newPos));
+                const newQ = oldQValue + LEARNING_RATE * (reward + DISCOUNT_FACTOR * maxFutureQ - oldQValue);
+                qTable[posKey(oldPos)][action] = newQ;
+            }
+            
+            if (!isSilent) {
+                updateStatsDisplays();
+                render();
+            }
+
+            if (message.includes('Success') && !isLearning) {
+               isManualGameOver = true;
+               showManualReview();
+            }
+        }
+        
+        function chooseAction(pos) {
+            if (Math.random() < explorationRate) return Math.floor(Math.random() * 4);
+            const qValues = getQValues(pos);
+            return qValues.indexOf(Math.max(...qValues));
+        }
+
+        async function runEpisode(isSilent = false) {
+            resetAgent(false);
+            let isDone = false;
+            while (!isDone && currentEpisodeSteps < MAX_STEPS) {
+                const action = chooseAction(agentPos);
+                takeAction(action, true, isSilent);
+                if (agentPos.x === goalPos.x && agentPos.y === goalPos.y) isDone = true;
+                
+                if (!isSilent) {
+                    await new Promise(resolve => setTimeout(resolve, 50));
+                }
+            }
+            episodeCount++;
+            return { steps: currentEpisodeSteps, totalReward: totalEpisodeReward, solved: isDone };
+        }
+
+        async function runMultipleEpisodes(count) {
+            for (let i = 0; i < count; i++) {
+                 await runEpisode();
+                 episodeStats.textContent = `Episode ${episodeCount} finished in ${currentEpisodeSteps} steps.`;
+            }
+        }
+        
+        function runEpisodeSilently() {
+            resetAgent(false);
+            let isDone = false;
+            while (!isDone && currentEpisodeSteps < MAX_STEPS) {
+                const action = chooseAction(agentPos);
+                takeAction(action, true, true);
+                if (agentPos.x === goalPos.x && agentPos.y === goalPos.y) isDone = true;
+            }
+            episodeCount++;
+            return { steps: currentEpisodeSteps, totalReward: totalEpisodeReward, solved: isDone };
+        }
+
+        async function runAndLogExperiment() {
+            const btn = document.getElementById('log-experiment-btn');
+            btn.disabled = true;
+            btn.textContent = 'Running...';
+            messageBox.textContent = 'Running 100 episodes...';
+
+            resetQTable();
+            let episodeResults = [];
+            const numEpisodes = 100;
+            const visualEnd = 10;
+
+            explorationRate = 0.5;
+            for (let i = 0; i < numEpisodes - visualEnd; i++) {
+                explorationRate = Math.max(0.01, explorationRate * 0.99);
+                const result = runEpisodeSilently(); 
+                episodeResults.push(result);
+                if ((i + 1) % 10 === 0) {
+                    episodeStats.textContent = `Training... Episode ${i + 1}/${numEpisodes}`;
+                    await new Promise(resolve => setTimeout(resolve, 0));
+                }
+            }
+            
+            explorationRate = 0; 
+            for (let i = 0; i < visualEnd; i++) {
+                const result = await runEpisode(false);
+                episodeResults.push(result);
+                episodeStats.textContent = `Demonstrating... Episode ${numEpisodes - visualEnd + i + 1}/${numEpisodes}`;
+            }
+            explorationRate = 0.3;
+            
+            const avgWindow = episodeResults.slice(-20);
+            const avgSteps = avgWindow.reduce((sum, res) => sum + res.steps, 0) / avgWindow.length;
+            const avgReward = avgWindow.reduce((sum, res) => sum + res.totalReward, 0) / avgWindow.length;
+            const didSolve = avgWindow.every(res => res.solved);
+
+            let expName = currentPresetName;
+            if (expName === 'Custom') {
+                customExperimentCount++;
+                expName = `Custom #${customExperimentCount}`;
+            }
+            if (experiments.some(e => e.name === expName)) {
+                let i = 2;
+                while(experiments.some(e => e.name === `${expName} (${i})`)) { i++; }
+                expName = `${expName} (${i})`;
+            }
+            
+            experiments.push({
+                name: expName,
+                rewards: { ...rewards },
+                avgSteps: avgSteps.toFixed(1),
+                avgReward: avgReward.toFixed(2),
+                rewardPerStep: avgSteps > 0 ? (avgReward / avgSteps).toFixed(2) : 'N/A',
+                solved: didSolve
+            });
+            renderExperimentTable();
+            analyzeExperiments();
+
+            btn.disabled = false;
+            btn.textContent = 'Run & Log Full Experiment (100 Episodes)';
+            
+            goToStep(4);
+            messageBox.textContent = `Experiment "${expName}" logged!`;
+        }
+        
+        function analyzeExperiments() {
+            const analysisSection = document.getElementById('dynamic-analysis');
+            const analysisText = document.getElementById('analysis-text');
+            const exportSection = document.getElementById('export-section');
+
+            if (experiments.length === 0) {
+                analysisSection.classList.add('hidden');
+                exportSection.classList.add('hidden');
+                return;
+            }
+            
+            analysisSection.classList.remove('hidden');
+            exportSection.classList.remove('hidden');
+
+            const failedAgents = experiments.filter(e => !e.solved);
+            const successfulAgents = experiments.filter(e => e.solved);
+
+            if (failedAgents.length > 0) {
+                 analysisText.innerHTML = `<strong>Aha! The 'Lazy Agent' Trap!</strong> Notice the '${failedAgents[0].name}' agent failed to solve the puzzle consistently. It found a loophole to get points by wandering, not by achieving the goal. This is a classic RL problem called 'reward hacking'.`;
+            } else if (successfulAgents.length >= 2) {
+                const bestRpsExp = [...successfulAgents].sort((a,b) => b.rewardPerStep - a.rewardPerStep)[0];
+                analysisText.innerHTML = `Of the successful agents, your <strong>'${bestRpsExp.name}'</strong> agent has the highest 'Reward/Step', making it the most efficient strategy so far.`;
+            } else {
+                analysisText.textContent = "Run another experiment with different rewards to compare results!";
+            }
+        }
+
+        // --- UI & REWARD MANAGEMENT ---
+        function loadPreset(presetName) {
+            const presets = {
+                default: { goal: 10, wall: -5, step: -0.1, name: "Default" },
+                timid: { goal: 10, wall: -100, step: -0.1, name: "Timid Agent" },
+                lazy: { goal: 10, wall: -1, step: 0.1, name: "Lazy Agent" }
+            };
+            rewards = presets[presetName];
+            currentPresetName = presets[presetName].name;
+            updateRewardInputs();
+            messageBox.textContent = `"${presets[presetName].name}" preset loaded.`;
+            highlightPresetButton(presetName);
+        }
+
+        function activateCustomPreset() {
+            updateRewards();
+            highlightPresetButton('custom');
+        }
+        
+        function highlightPresetButton(preset) {
+            document.querySelectorAll('.preset-btn').forEach(btn => btn.classList.remove('active'));
+            let btnToActivate;
+            if (preset === 'custom') {
+                btnToActivate = document.getElementById('custom-preset-btn');
+            } else {
+                btnToActivate = document.getElementById(`preset-${preset}`);
+            }
+            if (btnToActivate) {
+                btnToActivate.classList.add('active');
+            }
+        }
+
+        function updateRewards() {
+            rewards = {
+                goal: parseFloat(document.getElementById('goal-reward').value),
+                wall: parseFloat(document.getElementById('wall-reward').value),
+                step: parseFloat(document.getElementById('step-reward').value)
+            };
+            currentPresetName = 'Custom';
+        }
+        
+        function updateRewardInputs() {
+            document.getElementById('goal-reward').value = rewards.goal;
+            document.getElementById('wall-reward').value = rewards.wall;
+            document.getElementById('step-reward').value = rewards.step;
+        }
+
+        function renderExperimentTable() {
+            const tableBody = document.querySelector("#experiment-table tbody");
+            tableBody.innerHTML = '';
+            experiments.forEach((exp, index) => {
+                const row = tableBody.insertRow();
+                row.innerHTML = `<td class="px-2 py-2 font-medium">${exp.name}</td><td class="px-2 py-2 font-bold">${exp.avgSteps}</td><td class="px-2 py-2 font-bold">${exp.avgReward}</td><td class="px-2 py-2 font-bold text-blue-600">${exp.rewardPerStep}</td><td class="px-2 py-2"><button onclick="modifyAndRerun(${index})" class="bg-gray-200 hover:bg-gray-300 text-xs py-1 px-2 rounded">Modify</button></td>`;
+            });
+        }
+        
+        function modifyAndRerun(expIndex) {
+            const exp = experiments[expIndex];
+            if (!exp) return;
+            
+            rewards = exp.rewards;
+            currentPresetName = exp.name.startsWith('Custom') ? 'Custom' : exp.name;
+            updateRewardInputs();
+            highlightPresetButton(currentPresetName.toLowerCase().split(' ')[0].replace('#', ''));
+            goToStep(3);
+            messageBox.textContent = `Loaded '${exp.name}' settings for modification.`
+        }
+        
+        function showManualReview() {
+            let reviewText = '';
+            if (manualWallsHit > 0) {
+                reviewText += `You hit ${manualWallsHit} wall(s), which really hurt your score of <strong>${totalEpisodeReward.toFixed(2)}</strong>. `;
+            } else {
+                reviewText += `Great job avoiding the walls! That's key to a high score. `;
+            }
+
+            if (currentEpisodeSteps <= 8) {
+                reviewText += `And you did it in only ${currentEpisodeSteps} steps - that's optimal! You're a natural. `;
+            } else {
+                reviewText += `It took you ${currentEpisodeSteps} steps. The AI will learn to find an even shorter path. `;
+            }
+            
+            document.getElementById('manual-review-text').innerHTML = reviewText;
+            manualControls.classList.add('hidden');
+            manualReview.classList.remove('hidden');
+        }
+
+        function updateStatsDisplays() {
+            episodeStats.textContent = `Steps: ${currentEpisodeSteps} | Total Reward: ${totalEpisodeReward.toFixed(2)}`;
+        }
+
+        function render() {
+            gridContainer.innerHTML = '';
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'grid-cell relative';
+                    const pos = {x, y};
+                    if (x === agentPos.x && y === agentPos.y) cell.innerHTML = AGENT;
+                    else if (x === goalPos.x && y === goalPos.y) cell.innerHTML = GOAL;
+                    else if (walls.some(w => w.x === x && w.y === y)) cell.innerHTML = WALL;
+                    
+                    if (x === agentPos.x && y === agentPos.y) cell.classList.add('bg-indigo-200');
+                    else if (x === goalPos.x && y === goalPos.y) cell.classList.add('bg-yellow-200');
+                    else if (walls.some(w => w.x === x && w.y === y)) cell.classList.add('bg-gray-700');
+                    else cell.classList.add('bg-white');
+                    
+                    if (currentStep >= 3) {
+                        const qValues = getQValues(pos);
+                        const bestActionIndex = qValues.indexOf(Math.max(...qValues));
+                        ['q-up', 'q-right', 'q-down', 'q-left'].forEach((cls, i) => {
+                            const qSpan = document.createElement('span');
+                            qSpan.className = `q-value ${cls}`;
+                            qSpan.textContent = qValues[i].toFixed(1);
+                            if (qValues[i] === qValues[bestActionIndex] && qValues[i] > 0) {
+                                qSpan.style.fontWeight = 'bold';
+                                qSpan.style.color = '#10b981';
+                            }
+                            cell.appendChild(qSpan);
+                        });
+                    }
+                    gridContainer.appendChild(cell);
+                }
+            }
+        }
+        
+        function changeStep(direction) {
+            currentStep += direction;
+            updateStepUI();
+        }
+
+        function goToStep(stepNumber) {
+            currentStep = stepNumber;
+            updateStepUI();
+        }
+
+        function updateStepUI() {
+            currentStep = Math.max(1, Math.min(TOTAL_STEPS, currentStep));
+            stepPanels.forEach((panel, index) => {
+                panel.classList.toggle('hidden', index + 1 !== currentStep);
+                panel.classList.toggle('active-step', index + 1 === currentStep);
+            });
+            prevBtn.disabled = currentStep === 1;
+            nextBtn.disabled = currentStep === TOTAL_STEPS;
+            nextBtn.textContent = currentStep === TOTAL_STEPS ? "Lesson Complete!" : "Next Step";
+            
+            if (currentStep !== 2) {
+                episodeStats.textContent = '';
+            } else {
+                resetManualPlay();
+            }
+            render();
+        }
+        
+        function copyLLMPrompt() {
+            const promptArea = document.getElementById('llm-prompt-area');
+            promptArea.select();
+            document.execCommand('copy');
+            const btn = document.getElementById('copy-prompt-btn');
+            btn.textContent = 'Copied!';
+            setTimeout(() => btn.textContent = 'Copy Prompt', 2000);
+        }
+        
+        function generateLLMPrompt() {
+            const promptContainer = document.getElementById('prompt-container');
+            const promptArea = document.getElementById('llm-prompt-area');
+            
+            let markdownTable = "| Name | Avg Steps | Avg Reward | Reward/Step |\n";
+            markdownTable += "|:---|:---:|:---:|:---:|\n";
+            experiments.forEach(exp => {
+                markdownTable += `| ${exp.name} | ${exp.avgSteps} | ${exp.avgReward} | ${exp.rewardPerStep} |\n`;
+            });
+
+            const prompt = `You are an expert in Reinforcement Learning. I have run some experiments training an agent to solve a maze. Below are my results. Please analyze them for me.
+
+- Which agent was the most successful and why?
+- Explain the trade-offs between the different reward strategies.
+- What do these results teach me about reward design and the "reward hacking" problem?
+
+My Experiment Results:
+${markdownTable}`;
+
+            promptArea.value = prompt;
+            promptContainer.classList.remove('hidden');
+        }
+
+        window.onload = initialize;
+    </script>
+</body>
+</html>
